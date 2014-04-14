@@ -63,6 +63,15 @@ module.exports.routes = {
       headers: 'content-type,X-Requested-With'
     }
   },
+  '/stations/byState/:stateFips':{
+    controller : 'StationsController',
+    action : 'getStateStations',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
 
 
 

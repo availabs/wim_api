@@ -91,7 +91,31 @@ module.exports = {
 		});
  	},
 
-
+ 	getStateStations:function(req,res){
+ 		var state_fips = req.param('stateFips');
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+		    jwt.authorize(function(err, result) {
+		    	if (err) console.log(err);
+		    	console.log()
+			    var request = client.bigquery.jobs.query({
+			    	kind: "bigquery#queryRequest",
+			    	projectId: 'avail-wim',
+			    	timeoutMs: '30000'
+			    });
+			    request.body = {};
+			    request.body.query = 'select state_fips,station_id,year,month,count(1) as num_trucks FROM [tmasWIM12.wim2012] where state_fips= "'+state_fips+'" and state_fips is not null group by state_fips,station_id,year,month order by state_fips,num_trucks,year,month desc;';
+			    request.body.projectId = 'avail-wim';
+			    console.log(request);
+		      	request
+	        	.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		console.log(response);
+	          		res.json(response);
+	        	});
+		    });
+		});
+ 	},
 
   /**
    * Overrides for the settings in `config/controllers.js`
