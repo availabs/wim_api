@@ -1,0 +1,2 @@
+# wimapi
+### a Sails application
