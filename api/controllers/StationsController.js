@@ -103,7 +103,7 @@ module.exports = {
 			    	timeoutMs: '30000'
 			    });
 			    request.body = {};
-			    request.body.query = 'select state_fips,station_id,year,month,count(1) as num_trucks FROM [tmasWIM12.wim2012] where state_fips= "'+state_fips+'" and state_fips is not null group by state_fips,station_id,year,month order by state_fips,num_trucks,year,month desc;';
+			    request.body.query = 'select station_id, year,count( distinct num_months) as numMon,count(distinct num_days) as numDay, count(distinct num_hours)/8760 as percent, sum(total)/count(distinct num_days) as AADT from (select  station_id,year,concat(string(year),string(month)) as num_months,concat(string(year),string(month),string(day)) as num_days ,concat(string(year),string(month),string(day),string(hour)) as num_hours, count(station_id) as total FROM [tmasWIM12.wim2012] where state_fips="'+state_fips+'" and state_fips is not null group by station_id,year,num_hours,num_months,num_days) group by station_id,year order by station_id,year';
 			    request.body.projectId = 'avail-wim';
 			    console.log(request);
 		      	request
