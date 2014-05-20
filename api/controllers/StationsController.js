@@ -116,6 +116,7 @@ module.exports = {
 		    });
 		});
  	},
+
  	getStationData:function(req,res){
  		if(typeof req.param('station_id') == 'undefined'){
  			res.send('{status:"error",message:"'+station_id required+'"}',500);
@@ -127,8 +128,10 @@ module.exports = {
  				+ "from [tmasWIM12.wim2012] where station_id = '"+station_id+"'"
  				+ "group by station_id,date,class"
  				+ "order by station_id,date,class ";
+ 				
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
 		    jwt.authorize(function(err, result) {
+		    	if (err) console.log(err);
 		    	console.log()
 			    var request = client.bigquery.jobs.query({
 			    	kind: "bigquery#queryRequest",
@@ -136,11 +139,34 @@ module.exports = {
 			    	timeoutMs: '30000'
 			    });
 			    request.body = {};
-			    request.body.query = sql
+			    request.body.query = sql;
 			    request.body.projectId = 'avail-wim';
 			    console.log(request);
-		      	request
-	        	.withAuthClient(jwt)
+		      	request.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		console.log(response);
+	          		res.json(response);
+	        	});
+		    });
+		}
+	},
+ 	getTrucks:function(req,res){
+ 		var station_id = req.param('stationId');
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+		    jwt.authorize(function(err, result) {
+		    	if (err) console.log(err);
+		    	console.log()
+			    var request = client.bigquery.jobs.query({
+			    	kind: "bigquery#queryRequest",
+			    	projectId: 'avail-wim',
+			    	timeoutMs: '30000'
+			    });
+			    request.body = {};
+			    request.body.query = 'select num_days,count(num_days) as numDay,month,day,class from(select station_id,class,concat(string(year),string(month),string(day)) as num_days, month,day FROM [tmasWIM12.wim2012] where station_id="'+station_id+'" and station_id is not null) group by num_days,month,day,class';
+			    request.body.projectId = 'avail-wim';
+			    console.log(request);
+		      	request.withAuthClient(jwt)
 	        	.execute(function(err, response) {
 	          		if (err) console.log(err);
 	          		console.log(response);
