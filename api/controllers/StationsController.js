@@ -116,10 +116,9 @@ module.exports = {
 		    });
 		});
  	},
-
  	getStationData:function(req,res){
  		if(typeof req.param('station_id') == 'undefined'){
- 			res.send('{status:"error",message:"'+station_id required+'"}',500);
+ 			res.send('{status:"error",message:"station_id required"}',500);
  			return console.log(err);
  		}
  		var station_id = req.param('station_id');
@@ -128,7 +127,7 @@ module.exports = {
  				+ "from [tmasWIM12.wim2012] where station_id = '"+station_id+"'"
  				+ "group by station_id,date,class"
  				+ "order by station_id,date,class ";
- 				
+
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
 		    jwt.authorize(function(err, result) {
 		    	if (err) console.log(err);
@@ -149,7 +148,7 @@ module.exports = {
 	          		res.json(response);
 	        	});
 		    });
-		}
+		});
 	},
  	getTrucks:function(req,res){
  		var station_id = req.param('stationId');

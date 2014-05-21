@@ -72,26 +72,20 @@ module.exports.routes = {
       headers: 'content-type,X-Requested-With'
     }
   },
-<<<<<<< HEAD
   '/stations/graphData/:station_id':{
     controller : 'StationsController',
     action : 'getStationData',
-=======
   '/stations/byStation/:stationId':{
     controller : 'StationsController',
     action : 'getTrucks',
->>>>>>> upstream/master
     cors: {
       origin: '*',
       methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
       headers: 'content-type,X-Requested-With'
     }
-<<<<<<< HEAD
   },
 
-=======
   }
->>>>>>> upstream/master
 
 
   /*
