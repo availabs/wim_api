@@ -75,6 +75,7 @@ module.exports.routes = {
   '/stations/graphData/:station_id':{
     controller : 'StationsController',
     action : 'getStationData',
+  },
   '/stations/byStation/:stationId':{
     controller : 'StationsController',
     action : 'getTrucks',
@@ -84,8 +85,17 @@ module.exports.routes = {
       headers: 'content-type,X-Requested-With'
     }
   },
+  '/stations/byStation':{
+    controller : 'StationsController',
+    action : 'getYears',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
 
-  }
+
 
 
   /*
