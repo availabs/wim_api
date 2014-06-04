@@ -31,7 +31,7 @@ module.exports = {
 		stationsCollection.type = "FeatureCollection";
 		stationsCollection.features = [];
 
-		var sql = 'SELECT  station_id,state_code,ST_AsGeoJSON(the_geom) station_location FROM tmas where num_lane_1 > 0 group by station_id,state_code,ST_AsGeoJSON(the_geom);'
+		var sql = 'SELECT station_id,state_code,ST_AsGeoJSON(the_geom) station_location FROM tmas where num_lane_1 > 0 group by station_id,state_code,ST_AsGeoJSON(the_geom);'
 		Stations.query(sql,{},function(err,data){
 			if (err) {res.send('{status:"error",message:"'+err+'"}',500);return console.log(err);}
 				data.rows.forEach(function(stations){
@@ -119,16 +119,49 @@ module.exports = {
 		    //});
 		});
  	},
+ 	getStationGeoForState: function(req, res) {
+ 		if(typeof req.param('statefips') == 'undefined'){
+ 			res.send('{status:"error",message:"state FIPS required"}',500);
+ 			return;
+ 		}
+ 		var stateFIPS = +req.param('statefips');
+ 		
+		var stationsCollection = {
+			type: "FeatureCollection",
+			features: []
+		}
+
+ 		var sql = 'SELECT DISTINCT station_id, ST_AsGeoJSON(the_geom) as geom ' +
+ 				  'FROM tmas ' +
+ 				  'WHERE state_code = ' + stateFIPS + ' AND num_lane_1 > 0;'
+
+		Stations.query(sql, {}, function(err, data){
+			if (err) {
+				res.send('{status:"error",message:"'+err+'"}',500);
+				return console.log(err);
+			}
+
+			data.rows.forEach(function(stations){
+				var stationsFeature = {};
+				stationsFeature.type="Feature";
+				stationsFeature.geometry = JSON.parse(stations.geom);
+				stationsFeature.properties = {};
+				stationsFeature.properties.station_id = stations.station_id;
+				stationsCollection.features.push(stationsFeature);
+
+				});
+
+			res.send(stationsCollection);
+		});
+ 	},
  	getStationData:function(req,res){
  		if(typeof req.param('station_id') == 'undefined'){
  			res.send('{status:"error",message:"station_id required"}',500);
- 			return console.log(err);
+ 			return;
  		}
  		var station_id = req.param('station_id'),
  			depth = req.param('depth');
 
-//SELECT  year, month, class, count(*) as amount FROM [tmasWIM12.wim2012]
-//where station_id = '000014' group by year, month, class order by month, class;
  		var select = {
  			1: 'year',
  			2: 'month',
@@ -138,10 +171,7 @@ module.exports = {
 
  		var SQL = generateSQL();
 
- 		//console.log(SQL);
-
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
-		    //jwt.authorize(function(err, result) {
 		    	if (err) {
 		    		console.log(err);
 		    		return;
@@ -156,17 +186,14 @@ module.exports = {
 			    request.body = {};
 			    request.body.query = SQL;
 			    request.body.projectId = 'avail-wim';
-			    //console.log(request);
 		      	request.withAuthClient(jwt)
 	        	.execute(function(err, response) {
 	          		if (err) {
 	          			console.log(err);
 	          			return;
 	          		}
-	          		//console.log(response);
 	          		res.json(response);
 	        	});
-		    //});
 		});
  		function generateSQL() {
  			var sql	= "SELECT " + select[depth.length] + ", class, total_weight as weight, count(*) as amount "

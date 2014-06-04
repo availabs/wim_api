@@ -80,6 +80,15 @@ module.exports.routes = {
       methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
       headers: 'content-type,X-Requested-With'
     }
+  },
+  '/stations/stateGeo/:statefips':{
+    controller : 'StationsController',
+    action : 'getStationGeoForState',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
   },  
   '/stations/byStation/:stationId':{
     controller : 'StationsController',
