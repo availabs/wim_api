@@ -31,7 +31,7 @@ module.exports = {
 		stationsCollection.type = "FeatureCollection";
 		stationsCollection.features = [];
 
-		var sql = 'SELECT  station_id,state_code,ST_AsGeoJSON(the_geom) station_location FROM tmas where num_lane_1 > 0 group by station_id,state_code,ST_AsGeoJSON(the_geom);'
+		var sql = 'SELECT station_id,state_code,ST_AsGeoJSON(the_geom) station_location FROM tmas where num_lane_1 > 0 group by station_id,state_code,ST_AsGeoJSON(the_geom);'
 		Stations.query(sql,{},function(err,data){
 			if (err) {res.send('{status:"error",message:"'+err+'"}',500);return console.log(err);}
 				data.rows.forEach(function(stations){
@@ -72,6 +72,7 @@ module.exports = {
 		});
  	},
  	getAllStations:function(req,res){
+ 		var database = req.param('database');
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
 		    //jwt.authorize(function(err, result) {
 		    	if (err) console.log(err);
@@ -81,7 +82,7 @@ module.exports = {
 			    	timeoutMs: '30000'
 			    });
 			    request.body = {};
-			    request.body.query = 'select state_fips,station_id,count(1) as num_trucks FROM [tmasWIM12.mdot] where  state_fips is not null group by state_fips,station_id order by state_fips,num_trucks desc;';
+			    request.body.query = 'select state_fips,station_id,count(1) as num_trucks FROM [tmasWIM12.'+database+'] where  state_fips is not null group by state_fips,station_id order by state_fips,num_trucks desc;';
 			    request.body.projectId = 'avail-wim';
 			    //console.log(request);
 		      	request
@@ -96,7 +97,8 @@ module.exports = {
  	},
 
  	getStateStations:function(req,res){
- 		var state_fips = req.param('stateFips');
+ 		var state_fips = req.param('stateFips'),
+ 			database = req.param('database');
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
 		    //jwt.authorize(function(err, result) {
 		    	if (err) console.log(err);
@@ -106,7 +108,7 @@ module.exports = {
 			    	timeoutMs: '30000'
 			    });
 			    request.body = {};
-			    request.body.query = 'select station_id, year,count( distinct num_months) as numMon,count(distinct num_days) as numDay, count(distinct num_hours)/8760 as percent, sum(total)/count(distinct num_days) as AADT from (select  station_id,year,concat(string(year),string(month)) as num_months,concat(string(year),string(month),string(day)) as num_days ,concat(string(year),string(month),string(day),string(hour)) as num_hours, count(station_id) as total FROM [tmasWIM12.mdot] where state_fips="'+state_fips+'" and state_fips is not null group by station_id,year,num_hours,num_months,num_days) group by station_id,year order by station_id,year';
+			    request.body.query = 'select station_id, year,count( distinct num_months) as numMon,count(distinct num_days) as numDay, count(distinct num_hours)/8760 as percent, sum(total)/count(distinct num_days) as AADT from (select  station_id,year,concat(string(year),string(month)) as num_months,concat(string(year),string(month),string(day)) as num_days ,concat(string(year),string(month),string(day),string(hour)) as num_hours, count(station_id) as total FROM [tmasWIM12.'+database+'] where state_fips="'+state_fips+'" and state_fips is not null group by station_id,year,num_hours,num_months,num_days) group by station_id,year order by station_id,year';
 			    request.body.projectId = 'avail-wim';
 			    //console.log(request);
 		      	request
@@ -119,17 +121,52 @@ module.exports = {
 		    //});
 		});
  	},
+ 	getStationGeoForState: function(req, res) {
+ 		console.log(req.session, req.sessionID);
+ 		if(typeof req.param('statefips') == 'undefined'){
+ 			res.send('{status:"error",message:"state FIPS required"}',500);
+ 			return;
+ 		}
+ 		var stateFIPS = +req.param('statefips');
+ 		
+		var stationsCollection = {
+			type: "FeatureCollection",
+			features: []
+		}
+
+ 		var sql = 'SELECT DISTINCT station_id, ST_AsGeoJSON(the_geom) as geom ' +
+ 				  'FROM tmas ' +
+ 				  'WHERE state_code = ' + stateFIPS + ' AND num_lane_1 > 0;'
+
+		Stations.query(sql, {}, function(err, data){
+			if (err) {
+				res.send('{status:"error",message:"'+err+'"}',500);
+				return console.log(err);
+			}
+
+			data.rows.forEach(function(stations){
+				var stationsFeature = {};
+				stationsFeature.type="Feature";
+				stationsFeature.geometry = JSON.parse(stations.geom);
+				stationsFeature.properties = {};
+				stationsFeature.properties.station_id = stations.station_id;
+				stationsCollection.features.push(stationsFeature);
+
+				});
+
+			res.send(stationsCollection);
+		});
+ 	},
  	getStationData:function(req,res){
  		if(typeof req.param('station_id') == 'undefined'){
  			res.send('{status:"error",message:"station_id required"}',500);
- 			return console.log(err);
+ 			return;
  		}
-
  		var station_id = req.param('station_id'),
- 			depth = req.param('depth');
+ 			depth = req.param('depth'),
+ 			database = req.param('database');
 
-//SELECT  year, month, class, count(*) as amount FROM [tmasWIM12.wim2012]
-//where station_id = '000014' group by year, month, class order by month, class;
+
  		var select = {
  			1: 'year',
  			2: 'month',
@@ -139,9 +176,7 @@ module.exports = {
 
  		var SQL = generateSQL();
 
- 		//console.log(SQL);
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
-		    //jwt.authorize(function(err, result) {
 		    	if (err) {
 		    		console.log(err);
 		    		return;
@@ -156,21 +191,18 @@ module.exports = {
 			    request.body = {};
 			    request.body.query = SQL;
 			    request.body.projectId = 'avail-wim';
-			    //console.log(request);
 		      	request.withAuthClient(jwt)
 	        	.execute(function(err, response) {
 	          		if (err) {
 	          			console.log(err);
 	          			return;
 	          		}
-	          		//console.log(response);
 	          		res.json(response);
 	        	});
-		    //});
 		});
  		function generateSQL() {
  			var sql	= "SELECT " + select[depth.length] + ", class, total_weight as weight, count(*) as amount "
- 				+ "FROM [tmasWIM12.wim2012] "
+ 				+ "FROM [tmasWIM12."+database+"] "
  				+ "WHERE station_id = '"+station_id+"' "
  				+ addPredicates()
  				+ "GROUP BY " + select[depth.length] + ", class, weight "
@@ -186,7 +218,8 @@ module.exports = {
  		}
 	},
  	getTrucks:function(req,res){
- 		var station_id = req.param('stationId');
+ 		var station_id = req.param('stationId'),
+ 			database = req.param('database');
  		console.time('auth');
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
 		    //jwt.authorize(function(err, result) {
@@ -198,7 +231,7 @@ module.exports = {
 			    });
 			    console.timeEnd('auth');
 			    request.body = {};
-			    request.body.query = 'select num_days,count(num_days) as numDay,month,day,class,year from(select station_id,class,concat(string(year),string(month),string(day)) as num_days, month,day,year FROM [tmasWIM12.mdot] where station_id="'+station_id+'" and station_id is not null) group by num_days,month,day,class,year';
+			    request.body.query = 'select num_days,count(num_days) as numDay,month,day,class,year from(select station_id,class,concat(string(year),string(month),string(day)) as num_days, month,day,year FROM [tmasWIM12.'+database+'] where station_id="'+station_id+'" and station_id is not null) group by num_days,month,day,class,year';
 			    request.body.projectId = 'avail-wim';
 			    //console.log(request);
 			    console.time('query');
@@ -215,6 +248,7 @@ module.exports = {
 		});
  	},
  	getYears:function(req,res){
+ 		var database = req.param('database');
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
 		    jwt.authorize(function(err, result) {
 		    	if (err) console.log(err);
@@ -225,7 +259,7 @@ module.exports = {
 			    	timeoutMs: '30000'
 			    });
 			    request.body = {};
-			    request.body.query = 'Select min(year),max(year) from [tmasWIM12.mdot]';
+			    request.body.query = 'Select min(year),max(year) from [tmasWIM12.'+database+']';
 			    request.body.projectId = 'avail-wim';
 			    console.log(request);
 		      	request.withAuthClient(jwt)
