@@ -122,7 +122,6 @@ module.exports = {
 		});
  	},
  	getStationGeoForState: function(req, res) {
- 		console.log(req.session, req.sessionID);
  		if(typeof req.param('statefips') == 'undefined'){
  			res.send('{status:"error",message:"state FIPS required"}',500);
  			return;
@@ -220,7 +219,7 @@ module.exports = {
  	getTrucks:function(req,res){
  		var station_id = req.param('stationId'),
  			database = req.param('database');
- 		console.time('auth');
+ 		//console.time('auth');
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
 		    //jwt.authorize(function(err, result) {
 		    	if (err) console.log(err);
@@ -229,20 +228,20 @@ module.exports = {
 			    	projectId: 'avail-wim',
 			    	timeoutMs: '30000'
 			    });
-			    console.timeEnd('auth');
+			    //console.timeEnd('auth');
 			    request.body = {};
 			    request.body.query = 'select num_days,count(num_days) as numDay,month,day,class,year from(select station_id,class,concat(string(year),string(month),string(day)) as num_days, month,day,year FROM [tmasWIM12.'+database+'] where station_id="'+station_id+'" and station_id is not null) group by num_days,month,day,class,year';
 			    request.body.projectId = 'avail-wim';
 			    //console.log(request);
-			    console.time('query');
+			    //console.time('query');
 		      	request.withAuthClient(jwt)
 	        	.execute(function(err, response) {
 	          		if (err) console.log(err);
 	          		//console.log(response);
-	          		console.timeEnd('query');
-	          		console.time('send');
+	          		//console.timeEnd('query');
+	          		//console.time('send');
 	          		res.json(response);
-	          		console.timeEnd('send');
+	          		//console.timeEnd('send');
 	        	});
 		    //});
 		});
@@ -252,7 +251,7 @@ module.exports = {
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
 		    jwt.authorize(function(err, result) {
 		    	if (err) console.log(err);
-		    	console.log()
+		    	//console.log()
 			    var request = client.bigquery.jobs.query({
 			    	kind: "bigquery#queryRequest",
 			    	projectId: 'avail-wim',
@@ -261,11 +260,11 @@ module.exports = {
 			    request.body = {};
 			    request.body.query = 'Select min(year),max(year) from [tmasWIM12.'+database+']';
 			    request.body.projectId = 'avail-wim';
-			    console.log(request);
+			    //console.log(request);
 		      	request.withAuthClient(jwt)
 	        	.execute(function(err, response) {
 	          		if (err) console.log(err);
-	          		console.log(response);
+	          		//console.log(response);
 	          		res.json(response);
 	        	});
 		    });
