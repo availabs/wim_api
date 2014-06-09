@@ -35,15 +35,6 @@ module.exports.routes = {
   '/': {
     view: 'home/index'
   },
-  '/session/database': {
-    controller : 'SessionController',
-    action : 'setDatabase',
-    cors: {
-      origin: '*',
-      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
-      headers: 'content-type,X-Requested-With'
-    }
-  },
   '/stations/geo':{
     controller : 'StationsController',
     action : 'stationsGeo',
