@@ -231,9 +231,9 @@ module.exports = {
 			    });
 			    console.timeEnd('auth');
 			    request.body = {};
-			    request.body.query = 'select num_days,count(num_days) as numDay,month,day,class,year from(select station_id,class,concat(string(year),string(month),string(day)) as num_days, month,day,year FROM [tmasWIM12.'+database+'] where station_id="'+station_id+'" and station_id is not null) group by num_days,month,day,class,year';
+			    request.body.query = 'select num_days,count(num_days) as numDay,month,day,class,year,sum(total_weight) from(select station_id,class,concat(string(year),string(month),string(day)) as num_days, month,day,year,total_weight FROM [tmasWIM12.'+database+'] where station_id="'+station_id+'" and station_id is not null) group by num_days,month,day,class,year';
 			    request.body.projectId = 'avail-wim';
-			    //console.log(request);
+			    //console.log(request.body.query);
 			    console.time('query');
 		      	request.withAuthClient(jwt)
 	        	.execute(function(err, response) {
