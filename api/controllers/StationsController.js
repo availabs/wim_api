@@ -127,34 +127,91 @@ module.exports = {
  			return;
  		}
  		var stateFIPS = +req.param('statefips');
+
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+	    	if (err) {
+	    		console.log(err);
+	    		return;
+	    	}
  		
-		var stationsCollection = {
-			type: "FeatureCollection",
-			features: []
-		}
-
- 		var sql = 'SELECT DISTINCT station_id, ST_AsGeoJSON(the_geom) as geom ' +
- 				  'FROM tmas ' +
- 				  'WHERE state_code = ' + stateFIPS + ' AND num_lane_1 > 0;'
-
-		Stations.query(sql, {}, function(err, data){
-			if (err) {
-				res.send('{status:"error",message:"'+err+'"}',500);
-				return console.log(err);
+			var featureCollection = {
+				type: "FeatureCollection",
+				features: []
 			}
 
-			data.rows.forEach(function(stations){
-				var stationsFeature = {};
-				stationsFeature.type="Feature";
-				stationsFeature.geometry = JSON.parse(stations.geom);
-				stationsFeature.properties = {};
-				stationsFeature.properties.station_id = stations.station_id;
-				stationsCollection.features.push(stationsFeature);
+			var sql = "SELECT station_id,func_class_code,method_of_vehicle_class,"+
+				"method_of_truck_weighing,type_of_sensor,latitude,longitude "+
+				"FROM [tmasWIM12.allStations] "+
+				"WHERE NOT latitude = '        ' AND NOT latitude = '       0'"+
+				"AND state_fips = '" +stateFIPS+ "' "+
+				"GROUP BY station_id,func_class_code,method_of_vehicle_class,"+
+				"method_of_truck_weighing,type_of_sensor,latitude,longitude;";
 
-				});
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+		    request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
+	        	.execute(function(err, BQobj) {
+			    	if (err) {
+			    		console.log(err);
+			    		return;
+			    	}
+			    	var schema = [];
+			    	BQobj.schema.fields.forEach(function(d) {
+			    		schema.push(d.name);
+			    	})
 
-			res.send(stationsCollection);
+			    	BQobj.rows.forEach(function(d) {
+			    		var feature = {
+			    			type:'Feature',
+			    			geometry: {
+			    				type:'Point',
+			    				coordinates: [0, 0]
+			    			},
+			    			properties: {}
+			    		};
+			    		schema.forEach(function(name, i) {
+			    			if (name != 'latitude' && name != 'longitude') {
+				    			feature.properties[name] = d.f[i].v;
+				    		} else if (name == 'longitude') {
+				    			var lng = d.f[i].v.replace(/^ (\d\d)/, '-$1.');
+				    			lng = lng.replace(/^(\d\d\d)/, '-$1.');
+				    			feature.geometry.coordinates[0] = lng;
+				    		} else if (name == 'latitude') {
+				    			var lat = d.f[i].v.replace(/^ ?(\d\d)/, '$1.');
+				    			feature.geometry.coordinates[1] = lat;
+				    		}
+			    		})
+			    		featureCollection.features.push(feature);
+			    	})
+
+	          		res.json(featureCollection);
+	        	});
 		});
+
+		// Stations.query(sql, {}, function(err, data){
+		// 	if (err) {
+		// 		res.send('{status:"error",message:"'+err+'"}',500);
+		// 		return console.log(err);
+		// 	}
+
+		// 	data.rows.forEach(function(stations){
+		// 		var stationsFeature = {};
+		// 		stationsFeature.type="Feature";
+		// 		stationsFeature.geometry = JSON.parse(stations.geom);
+		// 		stationsFeature.properties = {};
+		// 		stationsFeature.properties.station_id = stations.station_id;
+		// 		stationsCollection.features.push(stationsFeature);
+
+		// 		});
+
+		// 	res.send(stationsCollection);
+		// });
  	},
  	getStationData:function(req,res){
  		if(typeof req.param('station_id') == 'undefined'){
