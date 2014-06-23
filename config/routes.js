@@ -35,15 +35,6 @@ module.exports.routes = {
   '/': {
     view: 'home/index'
   },
-  '/session/database': {
-    controller : 'SessionController',
-    action : 'setDatabase',
-    cors: {
-      origin: '*',
-      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
-      headers: 'content-type,X-Requested-With'
-    }
-  },
   '/stations/geo':{
     controller : 'StationsController',
     action : 'stationsGeo',
@@ -111,6 +102,24 @@ module.exports.routes = {
   '/stations/byStation':{
     controller : 'StationsController',
     action : 'getYears',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
+  '/stations/byStation/class/:stationId':{
+    controller : 'StationsController',
+    action : 'getClass',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
+  '/stations/byStation/state/info/:stationId':{
+    controller : 'StationsController',
+    action : 'getStationInfo',
     cors: {
       origin: '*',
       methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
