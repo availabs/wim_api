@@ -73,52 +73,97 @@ module.exports = {
  	},
  	getAllStations:function(req,res){
  		var database = req.param('database');
+
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
-		    //jwt.authorize(function(err, result) {
-		    	if (err) console.log(err);
-			    var request = client.bigquery.jobs.query({
-			    	kind: "bigquery#queryRequest",
-			    	projectId: 'avail-wim',
-			    	timeoutMs: '30000'
-			    });
-			    request.body = {};
-			    request.body.query = 'select state_fips,station_id,count(1) as num_trucks FROM [tmasWIM12.'+database+'] where  state_fips is not null group by state_fips,station_id order by state_fips,num_trucks desc;';
-			    request.body.projectId = 'avail-wim';
-			    //console.log(request);
-		      	request
-	        	.withAuthClient(jwt)
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+
+		    var sql = 'SELECT state_fips,station_id,count(1) AS num_trucks '+
+					    'FROM [tmasWIM12.'+database+'] '+
+					    'WHERE state_fips IS NOT NULL '+
+					    'GROUP BY state_fips,station_id '+
+					    'ORDER BY state_fips,num_trucks DESC;';
+
+		    request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
 	        	.execute(function(err, response) {
 	          		if (err) console.log(err);
-	          		//console.log(response);
 	          		res.json(response);
 	        	});
-		    //});
+		});
+ 	},
+ 	getAllClassStations: function(req,res){
+ 		var database = req.param('database')+'Class';
+
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+
+		    var sql = 'SELECT state_fips,station_id,sum(total_vol) AS num_trucks '+
+					    'FROM [tmasWIM12.'+database+'] '+
+					    'WHERE state_fips IS NOT NULL '+
+					    'GROUP BY state_fips,station_id '+
+					    'ORDER BY state_fips,num_trucks DESC;';
+
+		    request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		res.json(response);
+	        	});
 		});
  	},
 
- 	getStateStations:function(req,res){
+ 	getStateStations: function(req,res) {
+ 		if(typeof req.param('stateFips') == 'undefined'){
+ 			res.send('{status:"error",message:"state FIPS required"}',500);
+ 			return;
+ 		}
  		var state_fips = req.param('stateFips'),
  			database = req.param('database');
+
  		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
-		    //jwt.authorize(function(err, result) {
-		    	if (err) console.log(err);
-			    var request = client.bigquery.jobs.query({
-			    	kind: "bigquery#queryRequest",
-			    	projectId: 'avail-wim',
-			    	timeoutMs: '30000'
-			    });
-			    request.body = {};
-			    request.body.query = 'select station_id, year,count( distinct num_months) as numMon,count(distinct num_days) as numDay, count(distinct num_hours)/8760 as percent, sum(total)/count(distinct num_days) as AADT from (select  station_id,year,concat(string(year),string(month)) as num_months,concat(string(year),string(month),string(day)) as num_days ,concat(string(year),string(month),string(day),string(hour)) as num_hours, count(station_id) as total FROM [tmasWIM12.'+database+'] where state_fips="'+state_fips+'" and state_fips is not null group by station_id,year,num_hours,num_months,num_days) group by station_id,year order by station_id,year';
-			    request.body.projectId = 'avail-wim';
-			    //console.log(request);
-		      	request
-	        	.withAuthClient(jwt)
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+
+		    var sql = 'select station_id, year,count( distinct num_months) as numMon, '+
+		    		  'count(distinct num_days) as numDay, count(distinct num_hours)/8760 as percent, '+
+		    		  'sum(total)/count(distinct num_days) as AADT '+
+		    		  'from (select  station_id,year,concat(string(year),string(month)) as num_months, '+
+		    				  'concat(string(year),string(month),string(day)) as num_days, '+
+		    				  'concat(string(year),string(month),string(day),string(hour)) as num_hours, '+
+		    				  'count(station_id) as total '+
+		    				  'FROM [tmasWIM12.'+database+'] '+
+		    				  'where state_fips="'+state_fips+'" '+
+		    				  'and state_fips is not null '+
+		    				  'group by station_id,year,num_hours,num_months,num_days) '+
+		    			'group by station_id,year '+
+		    			'order by station_id,year';
+
+		    request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
 	        	.execute(function(err, response) {
 	          		if (err) console.log(err);
-	          		//console.log(response);
 	          		res.json(response);
 	        	});
-		    //});
 		});
  	},
  	getStationGeoForState: function(req, res) {
@@ -161,6 +206,11 @@ module.exports = {
 			    		console.log(err);
 			    		return;
 			    	}
+			    	if (!('rows' in BQobj)) {
+			    		res.json(featureCollection);
+			    		return;
+			    	}
+
 			    	var schema = [];
 			    	BQobj.schema.fields.forEach(function(d) {
 			    		schema.push(d.name);
@@ -179,11 +229,16 @@ module.exports = {
 			    			if (name != 'latitude' && name != 'longitude') {
 				    			feature.properties[name] = d.f[i].v;
 				    		} else if (name == 'longitude') {
-				    			var lng = d.f[i].v.replace(/^ (\d\d)/, '-$1.');
-				    			lng = lng.replace(/^(\d\d\d)/, '-$1.');
+				    			var lng = (+d.f[i].v).toString();
+				    			if (/^1/.test(lng)) {
+				    				lng = lng.replace(/^(1\d\d)/, '-$1.');
+				    			} else {
+				    				lng = lng.replace(/^(\d\d)/, '-$1.');
+				    			}
+
 				    			feature.geometry.coordinates[0] = lng;
 				    		} else if (name == 'latitude') {
-				    			var lat = d.f[i].v.replace(/^ ?(\d\d)/, '$1.');
+				    			var lat = (+d.f[i].v).toString().replace(/^ ?(\d\d)/, '$1.');
 				    			feature.geometry.coordinates[1] = lat;
 				    		}
 			    		})
@@ -193,25 +248,68 @@ module.exports = {
 	          		res.json(featureCollection);
 	        	});
 		});
+ 	},
+ 	getClassStationData: function(req, res) {
+ 		if(typeof req.param('station_id') == 'undefined'){
+ 			res.send('{status:"error",message:"station_id required"}',500);
+ 			return;
+ 		}
+ 		var station_id = req.param('station_id'),
+ 			depth = req.param('depth'),
+ 			database = req.param('database')+'Class';
 
-		// Stations.query(sql, {}, function(err, data){
-		// 	if (err) {
-		// 		res.send('{status:"error",message:"'+err+'"}',500);
-		// 		return console.log(err);
-		// 	}
+ 		var select = {
+ 			1: 'year',
+ 			2: 'month',
+ 			3: 'day',
+ 			4: 'hour'
+ 		};
 
-		// 	data.rows.forEach(function(stations){
-		// 		var stationsFeature = {};
-		// 		stationsFeature.type="Feature";
-		// 		stationsFeature.geometry = JSON.parse(stations.geom);
-		// 		stationsFeature.properties = {};
-		// 		stationsFeature.properties.station_id = stations.station_id;
-		// 		stationsCollection.features.push(stationsFeature);
+ 		var SQL = generateSQL();
 
-		// 		});
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+		    request.body = {};
+		    request.body.query = SQL;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		res.json(response);
+	        	});
+		});
 
-		// 	res.send(stationsCollection);
-		// });
+		function generateSQL() {
+ 			var sql	= "SELECT " + select[depth.length] + ", sum(total_vol) AS amount, "
+ 				+ addClasses()
+ 				+ "FROM [tmasWIM12."+database+"] "
+ 				+ "WHERE station_id = '"+station_id+"' "
+ 				+ addPredicates()
+ 				+ "GROUP BY " + select[depth.length] + " "
+ 				+ "ORDER BY " + select[depth.length] + ";";
+
+			return sql;
+		}
+		function addClasses() {
+			var classes = '';
+
+			for (var i = 1; i < 14; i++) {
+				classes += 'sum(class'+i+') AS class'+i+', '
+			}
+			return classes;
+		}
+ 		function addPredicates() {
+ 			var preds = '';
+ 			for (var i = 1; i < depth.length; i++) {
+ 				preds += 'AND ' + select[i] + ' = ' + depth[i] + ' ';
+ 			}
+ 			return preds;
+ 		}
  	},
  	getStationData:function(req,res){
  		if(typeof req.param('station_id') == 'undefined'){
@@ -221,7 +319,6 @@ module.exports = {
  		var station_id = req.param('station_id'),
  			depth = req.param('depth'),
  			database = req.param('database');
-
 
  		var select = {
  			1: 'year',
@@ -257,7 +354,7 @@ module.exports = {
 	        	});
 		});
  		function generateSQL() {
- 			var sql	= "SELECT " + select[depth.length] + ", class, total_weight as weight, count(*) as amount "
+ 			var sql	= "SELECT " + select[depth.length] + ", class, total_weight AS weight, count(*) AS amount "
  				+ "FROM [tmasWIM12."+database+"] "
  				+ "WHERE station_id = '"+station_id+"' "
  				+ addPredicates()
