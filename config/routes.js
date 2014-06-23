@@ -53,7 +53,15 @@ module.exports.routes = {
       headers: 'content-type,X-Requested-With'
     }
   },
-
+    '/stations/allClass':{
+    controller : 'StationsController',
+    action : 'getAllClassStations',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
     '/stations/byState':{
     controller : 'StationsController',
     action : 'getAllStations',
@@ -72,9 +80,18 @@ module.exports.routes = {
       headers: 'content-type,X-Requested-With'
     }
   },
-  '/stations/graphData/:station_id':{
+  '/stations/graphwimData/:station_id':{
     controller : 'StationsController',
     action : 'getStationData',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
+  '/stations/graphclassData/:station_id':{
+    controller : 'StationsController',
+    action : 'getClassStationData',
     cors: {
       origin: '*',
       methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
@@ -107,7 +124,7 @@ module.exports.routes = {
       methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
       headers: 'content-type,X-Requested-With'
     }
-  },
+  }
 
 
 
