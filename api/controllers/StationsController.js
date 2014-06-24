@@ -166,6 +166,39 @@ module.exports = {
 	        	});
 		});
  	},
+ 	getStateClassStations: function(req,res) {
+ 		if(typeof req.param('stateFips') == 'undefined'){
+ 			res.send('{status:"error",message:"state FIPS required"}',500);
+ 			return;
+ 		}
+ 		var state_fips = req.param('stateFips'),
+ 			database = req.param('database')+'Class';
+
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+
+		    var sql = 'select station_id,year,avg(DT) as ADT ,avg(passenger) as APT,'+
+		    'avg(SU) as ASU ,avg(TT) as ATT from (select station_id,year,month,day,sum(total_vol) as DT,'+
+		    ' sum(class1+class2+class3) as passenger, sum(class4+class5+class6+class7) as SU,'+
+		    ' sum(class8+class9+class10+class11+class12+class13) as TT from [tmasWIM12.'+database+'] where '+
+		    ' state_fips ="'+state_fips+'" group by state_fips,station_id,year,month,day order by station_id, '+
+		    'station_id,year,month,day) group by station_id,year'
+
+		    request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		res.json(response);
+	        	});
+		});
+ 	},
  	getStationGeoForState: function(req, res) {
  		if(typeof req.param('statefips') == 'undefined'){
  			res.send('{status:"error",message:"state FIPS required"}',500);
