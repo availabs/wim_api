@@ -80,6 +80,15 @@ module.exports.routes = {
       headers: 'content-type,X-Requested-With'
     }
   },
+  '/stations/byState/class/:stateFips':{
+    controller : 'StationsController',
+    action : 'getStateClassStations',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
   '/stations/graphwimData/:station_id':{
     controller : 'StationsController',
     action : 'getStationData',
