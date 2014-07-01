@@ -199,6 +199,42 @@ module.exports = {
 	        	});
 		});
  	},
+ 	getStateWeightStations: function(req,res) {
+ 		if(typeof req.param('stateFips') == 'undefined'){
+ 			res.send('{status:"error",message:"state FIPS required"}',500);
+ 			return;
+ 		}
+ 		if(typeof req.param('class') == 'undefined'){
+ 			res.send('{status:"error",message:"vehicle class required"}',500);
+ 			return;
+ 		}
+ 		var state_fips = req.param('stateFips'),
+ 			database = req.param('database');
+
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+
+		    var sql = 'select station_id,year,count(distinct num_hours) as hours,'+
+		    		  'sum(weight) as weight from (select station_id,year, month,day,'+
+		    		  'concat(string(year),string(month),string(day),string(hour)) as num_hours,'+
+		    		  'sum(total_weight) as weight FROM [tmasWIM12.'+database+'] where state_fips="'+state_fips+'"'+
+		    		  'and class='+req.param('class')+' group each by station_id,year,month,day,num_hours order by station_id,'+
+		    		  'year,month,day,num_hours) group by station_id,year'
+ 			request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		res.json(response);
+	        	});
+		});
+ 	},
  	getStationGeoForState: function(req, res) {
  		if(typeof req.param('statefips') == 'undefined'){
  			res.send('{status:"error",message:"state FIPS required"}',500);
