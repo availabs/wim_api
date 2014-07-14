@@ -98,6 +98,15 @@ module.exports.routes = {
       headers: 'content-type,X-Requested-With'
     }
   },
+  '/stations/byState/overweight/:stateFips':{
+    controller : 'StationsController',
+    action : 'getStateOverweightStations',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
   '/stations/graphwimData/:station_id':{
     controller : 'StationsController',
     action : 'getStationData',

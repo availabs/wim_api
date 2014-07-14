@@ -235,6 +235,68 @@ module.exports = {
 	        	});
 		});
  	},
+ 	getStateOverweightStations: function(req,res) {
+ 		if(typeof req.param('stateFips') == 'undefined'){
+ 			res.send('{status:"error",message:"state FIPS required"}',500);
+ 			return;
+ 		}
+ 		if(typeof req.param('timeType') == 'undefined'){
+ 			res.send('{status:"error",message:"vehicle class required"}',500);
+ 			return;
+ 		}
+ 		if(typeof req.param('threshold') == 'undefined'){
+ 			res.send('{status:"error",message:"vehicle class required"}',500);
+ 			return;
+ 		}
+ 		if(typeof req.param('queryType') == 'undefined'){
+ 			res.send('{status:"error",message:"vehicle class required"}',500);
+ 			return;
+ 		}
+ 		var state_fips = req.param('stateFips'),
+ 			database = req.param('database'),
+ 			timeType = req.param('timeType'),
+ 			threshold = req.param('threshold'),
+ 			queryType = req.param('queryType');
+
+
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+		    if(queryType === "on"){
+		    	var sql = 'select a.station_id, SUM(CASE WHEN a.total_weight*220.462 >= '+threshold+' THEN 1 ELSE 0 END) as overTrucks,count(1) as total_trucks,a.month,b.func_class_code from [tmasWIM12.'+database+'] as a join (select station_id,func_class_code from [tmasWIM12.allStations] group by station_id, func_class_code) as b on a.station_id = b.station_id where a.state_fips="'+state_fips+'"'+
+		    	'and (a.class=8 or a.class=9 or a.class=10 or a.class=11 or a.class=12 or a.class=13) '+
+		    	'group by a.station_id,a.month,a.year,b.func_class_code order by a.station_id,a.month,a.year,b.func_class_code'
+		    }
+		    else if(timeType === "year"){
+			    var sql = 'select station_id, SUM(CASE WHEN total_weight*220.462 >= '+threshold+' THEN 1 ELSE 0 END) as overTrucks,count(1) as totalTrucks,year from [tmasWIM12.'+database+'] where state_fips="'+state_fips+'"'+
+			    		  'and (class=8 or class=9 or class=10 or class=11 or class=12 or class=13) '+ 
+			    		  'group by station_id,year order by station_id,year'
+			   		}
+	   		else if(timeType === "month"){
+	   			var sql = 'select station_id, SUM(CASE WHEN total_weight*220.462 >= '+threshold+' THEN 1 ELSE 0 END) as overTrucks,count(1) as totalTrucks,month from [tmasWIM12.'+database+'] where state_fips="'+state_fips+'"'+
+		    		  'and (class=8 or class=9 or class=10 or class=11 or class=12 or class=13) '+ 
+		    		  'group by station_id,year,month order by station_id,year,month'
+	   		}
+	   		else if(timeType === "day"){
+	   			var sql = 'select station_id, SUM(CASE WHEN total_weight*220.462 >= '+threshold+' THEN 1 ELSE 0 END) as overTrucks,count(1) as totalTrucks,day from [tmasWIM12.'+database+'] where state_fips="'+state_fips+'"'+
+		    		  'and (class=8 or class=9 or class=10 or class=11 or class=12 or class=13) '+ 
+		    		  'group by station_id,year,month,day order by station_id,year,month,day'
+	   		}
+
+		   	request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		res.json(response);
+	        	});
+		});
+ 	},
  	getStationGeoForState: function(req, res) {
  		if(typeof req.param('statefips') == 'undefined'){
  			res.send('{status:"error",message:"state FIPS required"}',500);
