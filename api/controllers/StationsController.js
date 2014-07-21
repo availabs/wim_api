@@ -188,7 +188,77 @@ module.exports = {
 		    ' sum(class8+class9+class10+class11+class12+class13) as TT from [tmasWIM12.'+database+'] where '+
 		    ' state_fips ="'+state_fips+'" group by state_fips,station_id,year,month,day order by station_id, '+
 		    'station_id,year,month,day) group by station_id,year'
+ 			
+		    request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		res.json(response);
+	        	});
+		});
+ 	},
+ 	getMonthlyInfo: function(req,res) {
+ 		if(typeof req.param('stateFips') == 'undefined'){
+ 			res.send('{status:"error",message:"state FIPS required"}',500);
+ 			return;
+ 		}
+ 		var state_fips = req.param('stateFips'),
+ 			database = req.param('database')+'Class';
 
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+
+			var sql = 'select station_id,month,avg(DT) as ADT, avg(passenger) as APT,avg(SU) as AST,avg(TT) as ATT,classCode '+
+ 			'from (select a.station_id,a.year,a.month,a.day,sum(a.total_vol) as DT,sum(a.class1+a.class2+a.class3) as passenger,'+
+ 			' sum(a.class4+a.class5+a.class6+a.class7) as SU,sum(a.class8+a.class9+a.class10+a.class11+a.class12+a.class13) as TT, '+
+ 			'b.func_class_code as classCode from [tmasWIM12.'+database+'] as a join '+
+ 			'(select station_id,func_class_code from [tmasWIM12.allStations] group by station_id, func_class_code) as b '+
+ 			'on a.station_id = b.station_id where a.state_fips ="'+state_fips+'" group by a.state_fips,a.station_id,a.year,a.month,a.day,'+
+ 			'classCode order by a.station_id, a.year,a.month,a.day) '+
+			'group by station_id,month,classCode'
+
+ 			request.body = {};
+		    request.body.query = sql;
+		    request.body.projectId = 'avail-wim';
+	      	request.withAuthClient(jwt)
+	        	.execute(function(err, response) {
+	          		if (err) console.log(err);
+	          		res.json(response);
+	        	});
+		});
+ 	},
+ 	getHourlyInfo: function(req,res) {
+ 		if(typeof req.param('stateFips') == 'undefined'){
+ 			res.send('{status:"error",message:"state FIPS required"}',500);
+ 			return;
+ 		}
+ 		var state_fips = req.param('stateFips'),
+ 			database = req.param('database')+'Class';
+
+ 		googleapis.discover('bigquery', 'v2').execute(function(err, client) {
+	    	if (err) console.log(err);
+		    var request = client.bigquery.jobs.query({
+		    	kind: "bigquery#queryRequest",
+		    	projectId: 'avail-wim',
+		    	timeoutMs: '30000'
+		    });
+
+			var sql = 'select station_id,hour,avg(DT) as ADT, avg(passenger) as APT,avg(SU) as AST,avg(TT) as ATT,classCode '+
+ 			'from (select a.station_id,a.year,a.month,a.day,sum(a.total_vol) as DT,sum(a.class1+a.class2+a.class3) as passenger,'+
+ 			' sum(a.class4+a.class5+a.class6+a.class7) as SU,sum(a.class8+a.class9+a.class10+a.class11+a.class12+a.class13) as TT, '+
+ 			'b.func_class_code as classCode,a.hour from [tmasWIM12.'+database+'] as a join '+
+ 			'(select station_id,func_class_code from [tmasWIM12.allStations] group by station_id, func_class_code) as b '+
+ 			'on a.station_id = b.station_id where a.state_fips ="'+state_fips+'" group by a.state_fips,a.station_id,a.year,a.month,a.day,'+
+ 			'classCode,a.hour) '+
+			'group by station_id,hour,classCode'
+			console.log(sql)
 		    request.body = {};
 		    request.body.query = sql;
 		    request.body.projectId = 'avail-wim';
@@ -286,8 +356,7 @@ module.exports = {
 		    		  'and (class=8 or class=9 or class=10 or class=11 or class=12 or class=13) '+ 
 		    		  'group by station_id,year,month,day order by station_id,year,month,day'
 	   		}
-
-		   	request.body = {};
+	   		request.body = {};
 		    request.body.query = sql;
 		    request.body.projectId = 'avail-wim';
 	      	request.withAuthClient(jwt)

@@ -171,7 +171,24 @@ module.exports.routes = {
       headers: 'content-type,X-Requested-With'
     }
   },
-
+  '/stations/byState/byMonthLine/:stateFips':{
+    controller : 'StationsController',
+    action : 'getMonthlyInfo',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
+  '/stations/byState/byHourLine/:stateFips':{
+    controller : 'StationsController',
+    action : 'getHourlyInfo',
+    cors: {
+      origin: '*',
+      methods: 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+      headers: 'content-type,X-Requested-With'
+    }
+  },
 
 
 
